@@ -12,10 +12,18 @@ echo "[INFO] Using Python: $PYTHON_BIN"
 "$PYTHON_BIN" --version
 
 echo "[INFO] Upgrading pip"
-"$PYTHON_BIN" -m pip install -U pip
+if "$PYTHON_BIN" -m pip install -U pip 2>/dev/null; then
+  echo "[INFO] pip upgraded successfully"
+elif "$PYTHON_BIN" -m pip install -U pip --user 2>/dev/null; then
+  echo "[INFO] pip upgraded with --user flag"
+else
+  echo "[WARN] pip upgrade skipped (system-managed installation)"
+fi
 
 echo "[INFO] Installing Python dependencies"
-"$PYTHON_BIN" -m pip install -U cloakbrowser playwright pandas beautifulsoup4
+"$PYTHON_BIN" -m pip install -U cloakbrowser playwright pandas beautifulsoup4 --user 2>/dev/null || \
+"$PYTHON_BIN" -m pip install -U cloakbrowser playwright pandas beautifulsoup4 || \
+echo "[WARN] Some dependencies may not have installed (continuing)"
 
 echo "[INFO] Installing Playwright Linux dependencies (best-effort)"
 if ! "$PYTHON_BIN" -m playwright install-deps chromium; then
@@ -26,8 +34,12 @@ echo "[INFO] Ensuring CloakBrowser binary"
 "$PYTHON_BIN" - <<'PY'
 from cloakbrowser import ensure_binary, binary_info
 
-ensure_binary()
-print(binary_info())
+try:
+    ensure_binary()
+    print(binary_info())
+except Exception as e:
+    print(f"[WARN] CloakBrowser binary check failed: {e}")
+    exit(0)
 PY
 
 echo ""
